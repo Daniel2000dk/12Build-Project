@@ -172,8 +172,7 @@ def start_dmu(lead_id):
                 "actief": False,
                 "bericht": f"{len(resultaat['contacten'])} contacten gevonden",
                 "contacten": resultaat["contacten"],
-                "kvk_info": resultaat.get("kvk_info", {}),
-                "linkedin_bedrijf_url": resultaat.get("linkedin_bedrijf_url", ""),
+                "zoeklinks": resultaat.get("zoeklinks", {}),
             })
         except Exception as e:
             logger.error(f"DMU fout voor lead {lead_id}: {e}")
