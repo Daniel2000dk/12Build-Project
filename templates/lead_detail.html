@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="pagina-header">
-    <a href="{{ url_for('dashboard') }}" class="terug">← Terug naar overzicht</a>
+    <a href="{{ url_for('dashboard') }}" class="terug">&larr; Terug naar overzicht</a>
     <h1>{{ lead.bedrijfsnaam }}</h1>
     <span class="status-badge groot {{ lead.status }}">{{ lead.status | replace('_', ' ') | title }}</span>
 </div>
@@ -14,33 +14,76 @@
         <div class="kaart">
             <h3>Bedrijfsinformatie</h3>
             <dl>
-                <dt>Website</dt><dd><a href="https://{{ lead.website }}" target="_blank">{{ lead.website }}</a></dd>
-                <dt>Sector</dt><dd>{{ lead.sector }}</dd>
-                <dt>Regio</dt><dd>{{ lead.regio }}</dd>
-                <dt>Grootte</dt><dd>{{ lead.grootte }}</dd>
-                <dt>Bron</dt><dd>{{ lead.bron }}</dd>
-                <dt>Groeisignaal</dt><dd>{{ lead.groeisignaal }}</dd>
-                <dt>Gevonden op</dt><dd>{{ lead.datum_gevonden[:10] }}</dd>
+                <dt>Website</dt>
+                <dd>
+                    {% if lead.website %}
+                    <a href="{{ lead.website if lead.website.startswith('http') else 'https://' + lead.website }}" target="_blank">{{ lead.website }}</a>
+                    {% else %}&ndash;{% endif %}
+                </dd>
+                <dt>Sector</dt><dd>{{ lead.sector or '&ndash;' }}</dd>
+                <dt>Regio</dt><dd>{{ lead.regio or '&ndash;' }}</dd>
+                <dt>Grootte</dt><dd>{{ lead.grootte or '&ndash;' }}</dd>
+                <dt>Bron</dt><dd>{{ lead.bron or '&ndash;' }}</dd>
+                <dt>Signaal</dt><dd>{{ lead.groeisignaal or '&ndash;' }}</dd>
+                <dt>Gevonden op</dt><dd>{{ lead.datum_gevonden[:10] if lead.datum_gevonden else '&ndash;' }}</dd>
+                {% if lead.notities %}
+                <dt>KVK</dt><dd>{{ lead.notities }}</dd>
+                {% endif %}
             </dl>
+
+            <!-- LinkedIn bedrijfslink -->
+            <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                {% if lead.website %}
+                <a href="{{ lead.website if lead.website.startswith('http') else 'https://' + lead.website }}"
+                   target="_blank" class="btn-secundair btn-klein-link">&#127760; Website</a>
+                {% endif %}
+                <a href="https://www.kvk.nl/zoeken/?q={{ lead.bedrijfsnaam | urlencode }}"
+                   target="_blank" class="btn-secundair btn-klein-link">&#128209; KVK zoeken</a>
+                <a href="https://www.linkedin.com/search/results/companies/?keywords={{ lead.bedrijfsnaam | urlencode }}"
+                   target="_blank" class="btn-linkedin btn-klein-link">in LinkedIn</a>
+            </div>
         </div>
 
-        {% if lead.contactpersonen %}
+        <!-- Contactpersonen + DMU Finder -->
         <div class="kaart">
-            <h3>Contactpersonen</h3>
-            {% for cp in lead.contactpersonen %}
-            <div class="contact-kaart vertrouwen-{{ cp.vertrouwen }}">
-                <div class="contact-naam">{{ cp.naam }}</div>
-                <div class="contact-functie">{{ cp.functie }}</div>
-                {% if cp.email %}<div class="contact-info">✉ {{ cp.email }}</div>{% endif %}
-                {% if cp.telefoon %}<div class="contact-info">📞 {{ cp.telefoon }}</div>{% endif %}
-                {% if cp.linkedin_url %}
-                <a href="https://{{ cp.linkedin_url }}" target="_blank" class="btn-linkedin">LinkedIn profiel →</a>
-                {% endif %}
-                <div class="vertrouwen-label">Vertrouwen: {{ cp.vertrouwen }}</div>
+            <div class="kaart-header-rij">
+                <h3>Contactpersonen</h3>
+                <button id="dmu-btn" class="btn-secundair btn-klein-link" onclick="startDMU({{ lead.id }})">
+                    &#128270; DMU zoeken
+                </button>
             </div>
-            {% endfor %}
+
+            <div id="dmu-voortgang" class="scan-voortgang verborgen" style="margin-bottom:12px;">
+                <div class="scan-spinner"></div>
+                <span id="dmu-bericht">Zoeken...</span>
+            </div>
+            <div id="dmu-resultaat" class="verborgen" style="margin-bottom:12px;"></div>
+
+            <div id="contacten-lijst">
+            {% if lead.contactpersonen %}
+                {% for cp in lead.contactpersonen %}
+                <div class="contact-kaart vertrouwen-{{ cp.vertrouwen }}">
+                    <div class="contact-naam">{{ cp.naam }}</div>
+                    <div class="contact-functie">{{ cp.functie or 'Functie onbekend' }}</div>
+                    {% if cp.email %}<div class="contact-info">&#9993; {{ cp.email }}</div>{% endif %}
+                    {% if cp.telefoon %}<div class="contact-info">&#128222; {{ cp.telefoon }}</div>{% endif %}
+                    <div class="contact-links">
+                        {% if cp.linkedin_url %}
+                        <a href="{{ cp.linkedin_url if cp.linkedin_url.startswith('http') else 'https://' + cp.linkedin_url }}"
+                           target="_blank" class="btn-linkedin">in LinkedIn zoeken &rarr;</a>
+                        {% else %}
+                        <a href="https://www.linkedin.com/search/results/people/?keywords={{ (cp.naam + ' ' + lead.bedrijfsnaam) | urlencode }}"
+                           target="_blank" class="btn-linkedin">in LinkedIn zoeken &rarr;</a>
+                        {% endif %}
+                    </div>
+                    <div class="vertrouwen-label">Vertrouwen: {{ cp.vertrouwen }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="geen-contacten">Nog geen contactpersonen gevonden. Klik op &ldquo;DMU zoeken&rdquo; om automatisch te zoeken.</p>
+            {% endif %}
+            </div>
         </div>
-        {% endif %}
 
         <!-- Status wijzigen -->
         <div class="kaart">
@@ -90,4 +133,79 @@
         </div>
     </div>
 </div>
+
+<script>
+var dmuActief = false;
+
+function startDMU(leadId) {
+    if (dmuActief) return;
+    dmuActief = true;
+
+    var btn = document.getElementById('dmu-btn');
+    var voortgang = document.getElementById('dmu-voortgang');
+    var resultaat = document.getElementById('dmu-resultaat');
+
+    btn.disabled = true;
+    btn.textContent = 'Bezig...';
+    voortgang.classList.remove('verborgen');
+    resultaat.classList.add('verborgen');
+
+    fetch('/api/dmu/zoek/' + leadId, {method: 'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            peilDMUStatus(leadId);
+        } else {
+            toonDMUFout(data.bericht || 'Fout bij starten');
+        }
+    })
+    .catch(function(e) { toonDMUFout('Verbindingsfout'); });
+}
+
+function peilDMUStatus(leadId) {
+    var interval = setInterval(function() {
+        fetch('/api/dmu/status/' + leadId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            document.getElementById('dmu-bericht').textContent = data.bericht || 'Zoeken...';
+
+            if (!data.actief) {
+                clearInterval(interval);
+                dmuActief = false;
+                document.getElementById('dmu-voortgang').classList.add('verborgen');
+
+                var btn = document.getElementById('dmu-btn');
+                btn.disabled = false;
+                btn.textContent = '↻ Opnieuw zoeken';
+
+                if (data.contacten && data.contacten.length > 0) {
+                    toonResultaat('&#10003; ' + data.contacten.length + ' contacten gevonden &ndash; pagina wordt herladen...', 'groen');
+                    setTimeout(function() { window.location.reload(); }, 1500);
+                } else {
+                    toonResultaat('Geen contacten gevonden op website. Gebruik de LinkedIn knop om handmatig te zoeken.', '');
+                }
+            }
+        })
+        .catch(function() {});
+    }, 3000);
+}
+
+function toonResultaat(tekst, kleur) {
+    var el = document.getElementById('dmu-resultaat');
+    el.innerHTML = tekst;
+    el.style.color = kleur === 'groen' ? '#2e7d32' : '#666';
+    el.style.fontSize = '13px';
+    el.style.padding = '8px 0';
+    el.classList.remove('verborgen');
+}
+
+function toonDMUFout(bericht) {
+    dmuActief = false;
+    document.getElementById('dmu-voortgang').classList.add('verborgen');
+    var btn = document.getElementById('dmu-btn');
+    btn.disabled = false;
+    btn.textContent = '&#128270; DMU zoeken';
+    toonResultaat('Fout: ' + bericht, '');
+}
+</script>
 {% endblock %}

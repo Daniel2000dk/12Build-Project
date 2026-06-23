@@ -8,7 +8,8 @@ from database import (
     get_alle_leads, get_lead, get_hete_leads, get_notificaties_count,
     update_lead_status, markeer_notificatie_gelezen, get_unieke_waarden,
     get_alle_kandidaten, get_kandidaten_count, sla_kandidaten_op,
-    keur_kandidaat_goed, wijs_kandidaat_af, verwijder_alle_kandidaten
+    keur_kandidaat_goed, wijs_kandidaat_af, verwijder_alle_kandidaten,
+    voeg_contactpersoon_toe, verwijder_automatische_contactpersonen, sla_kvk_info_op
 )
 
 load_dotenv()
@@ -124,6 +125,67 @@ def afwijzen(kandidaat_id):
 def alles_afwijzen():
     verwijder_alle_kandidaten()
     return jsonify({"ok": True})
+
+# ─── DMU Finder (Fase 3) ─────────────────────────────────────────────────────
+
+dmu_status = {}
+
+@app.route("/api/dmu/zoek/<int:lead_id>", methods=["POST"])
+def start_dmu(lead_id):
+    global dmu_status
+    if dmu_status.get(lead_id, {}).get("actief"):
+        return jsonify({"ok": False, "bericht": "DMU scan al bezig"})
+
+    lead = get_lead(lead_id)
+    if not lead:
+        return jsonify({"ok": False}), 404
+
+    dmu_status[lead_id] = {"actief": True, "bericht": "Zoeken...", "contacten": [], "kvk_info": {}, "linkedin_bedrijf_url": ""}
+
+    def zoek_dmu():
+        try:
+            from modules.dmu_finder import run_dmu_finder
+            dmu_status[lead_id]["bericht"] = "Website scrapen..."
+            resultaat = run_dmu_finder(lead["bedrijfsnaam"], lead.get("website", ""))
+
+            # Bestaande automatische contacten verwijderen en nieuwe opslaan
+            verwijder_automatische_contactpersonen(lead_id)
+            for c in resultaat["contacten"]:
+                voeg_contactpersoon_toe(
+                    lead_id,
+                    naam=c["naam"],
+                    functie=c.get("functie", ""),
+                    linkedin_url=c.get("linkedin_zoek_url", ""),
+                    email=c.get("email", ""),
+                    vertrouwen=c.get("vertrouwen", "onzeker"),
+                    bron=c.get("bron", "website")
+                )
+
+            # KVK info opslaan
+            if resultaat.get("kvk_info"):
+                sla_kvk_info_op(lead_id, resultaat["kvk_info"])
+
+            # Status updaten naar dmu_zoeken
+            update_lead_status(lead_id, "dmu_zoeken")
+
+            dmu_status[lead_id].update({
+                "actief": False,
+                "bericht": f"{len(resultaat['contacten'])} contacten gevonden",
+                "contacten": resultaat["contacten"],
+                "kvk_info": resultaat.get("kvk_info", {}),
+                "linkedin_bedrijf_url": resultaat.get("linkedin_bedrijf_url", ""),
+            })
+        except Exception as e:
+            logger.error(f"DMU fout voor lead {lead_id}: {e}")
+            dmu_status[lead_id] = {"actief": False, "bericht": f"Fout: {str(e)[:100]}", "contacten": [], "kvk_info": {}, "linkedin_bedrijf_url": ""}
+
+    t = threading.Thread(target=zoek_dmu, daemon=True)
+    t.start()
+    return jsonify({"ok": True})
+
+@app.route("/api/dmu/status/<int:lead_id>")
+def dmu_status_api(lead_id):
+    return jsonify(dmu_status.get(lead_id, {"actief": False, "bericht": "", "contacten": []}))
 
 # ─── Instellingen ────────────────────────────────────────────────────────────
 

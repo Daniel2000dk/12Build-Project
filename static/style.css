@@ -641,3 +641,15 @@ code {
 .leeg-icoon { font-size: 36px; margin-bottom: 12px; }
 .leeg-blok h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
 .leeg-blok p { color: var(--tekst-licht); font-size: 13px; max-width: 400px; margin: 0 auto; }
+
+/* LEAD DETAIL – DMU */
+.kaart-header-rij { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.kaart-header-rij h3 { margin-bottom: 0; }
+.btn-klein-link {
+    font-size: 12px;
+    padding: 5px 10px;
+    text-decoration: none;
+    display: inline-block;
+}
+.contact-links { margin-top: 6px; }
+.geen-contacten { font-size: 13px; color: var(--tekst-licht); padding: 8px 0; }

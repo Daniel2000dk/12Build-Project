@@ -430,3 +430,40 @@ def verwijder_alle_kandidaten():
     c.execute("DELETE FROM kandidaat_leads")
     conn.commit()
     conn.close()
+
+# ─── Fase 3: DMU Finder contactbeheer ────────────────────────────────────────
+
+def voeg_contactpersoon_toe(lead_id, naam, functie, linkedin_url='', email='', telefoon='', vertrouwen='onzeker', bron=''):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO contactpersonen (lead_id, naam, functie, linkedin_url, email, telefoon, vertrouwen)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (lead_id, naam, functie, linkedin_url, email, telefoon, vertrouwen))
+    cp_id = c.lastrowid
+    nu = datetime.now().strftime("%Y-%m-%d %H:%M")
+    c.execute("INSERT INTO acties (lead_id, type, omschrijving, datum) VALUES (?, 'dmu', ?, ?)",
+              (lead_id, f"Contactpersoon gevonden via {bron}: {naam} ({functie})", nu))
+    conn.commit()
+    conn.close()
+    return cp_id
+
+def verwijder_automatische_contactpersonen(lead_id):
+    """Verwijdert alleen automatisch gevonden contacten (niet handmatig toegevoegde)."""
+    conn = get_db()
+    c = conn.cursor()
+    # Verwijder contacten die geen telefoon hebben (aanname: handmatige hebben telefoon)
+    c.execute("DELETE FROM contactpersonen WHERE lead_id = ? AND (telefoon IS NULL OR telefoon = '')", (lead_id,))
+    conn.commit()
+    conn.close()
+
+def sla_kvk_info_op(lead_id, kvk_info):
+    """Slaat KVK-info op als notitie bij de lead."""
+    if not kvk_info.get('kvk_nummer') and not kvk_info.get('rechtsvorm'):
+        return
+    conn = get_db()
+    c = conn.cursor()
+    notitie = f"KVK: {kvk_info.get('kvk_nummer', 'onbekend')} | {kvk_info.get('rechtsvorm', '')} | {kvk_info.get('vestigingsplaats', '')}"
+    c.execute("UPDATE leads SET notities = ? WHERE id = ?", (notitie.strip(' |'), lead_id))
+    conn.commit()
+    conn.close()
