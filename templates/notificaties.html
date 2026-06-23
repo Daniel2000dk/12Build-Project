@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Meldingen{% endblock %}
+
+{% block content %}
+<div class="pagina-header">
+    <h1>🔥 Hete Leads</h1>
+    <span class="teller">{{ leads|length }} melding(en)</span>
+</div>
+
+{% if leads %}
+{% for lead in leads %}
+<div class="notif-kaart">
+    <div class="notif-header">
+        <div class="notif-naam">{{ lead.bedrijfsnaam }}</div>
+        <div class="notif-datum">{{ lead.notif_datum[:16] if lead.notif_datum else '' }}</div>
+    </div>
+    <div class="notif-titel">{{ lead.notif_titel }}</div>
+    <div class="notif-bericht">{{ lead.notif_bericht }}</div>
+    <div class="notif-acties">
+        <a href="{{ url_for('lead_detail', lead_id=lead.id) }}" class="btn-primair">Bekijk lead</a>
+        {% if lead.notif_id %}
+        <form method="POST" action="{{ url_for('markeer_gelezen', notif_id=lead.notif_id) }}" style="display:inline">
+            <button type="submit" class="btn-secundair">Markeer als gelezen</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="leeg">
+    <p>Geen hete leads op dit moment.</p>
+    <p>Zodra iemand reageert op een mail of LinkedIn bericht, verschijnt die hier.</p>
+</div>
+{% endif %}
+{% endblock %}

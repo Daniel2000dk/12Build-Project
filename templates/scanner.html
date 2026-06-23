@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Leadfinder{% endblock %}
+
+{% block content %}
+<div class="pagina-header">
+    <h1>Leadfinder</h1>
+    <span class="fase-badge">Fase 2 – nog niet actief</span>
+</div>
+
+<div class="kaart info-kaart">
+    <h3>Wat doet de Leadfinder?</h3>
+    <p>De leadfinder zoekt automatisch naar bouwbedrijven in Nederland die passen bij de doelgroep. Zoekbronnen:</p>
+    <ul>
+        <li>DuckDuckGo – "onderaannemer bouw Nederland capaciteit beschikbaar"</li>
+        <li>Indeed – vacatures voor account manager + bouw + Nederland</li>
+        <li>Nationale Vacaturebank – zelfde zoekopdrachten</li>
+        <li>Bouwend Nederland – ledenlijst</li>
+    </ul>
+    <p class="info-status">De leadfinder wordt gebouwd in <strong>Fase 2</strong>. Goedkeur dan hier nieuwe bedrijven.</p>
+</div>
+
+<div class="kaart">
+    <h3>Handmatig bedrijf toevoegen</h3>
+    <p>Voeg nu handmatig een bedrijf toe ter voorbereiding op Fase 2.</p>
+    <form class="formulier" action="#" method="POST">
+        <div class="form-rij">
+            <label>Bedrijfsnaam</label>
+            <input type="text" name="naam" placeholder="Van der Berg Bouwgroep" required>
+        </div>
+        <div class="form-rij">
+            <label>Website</label>
+            <input type="text" name="website" placeholder="vandenbergbouw.nl">
+        </div>
+        <div class="form-rij">
+            <label>Sector</label>
+            <select name="sector">
+                <option>Woningbouw</option>
+                <option>Utiliteitsbouw</option>
+                <option>Infra & GWW</option>
+                <option>Renovatie</option>
+                <option>Installatie</option>
+            </select>
+        </div>
+        <div class="form-rij">
+            <label>Regio</label>
+            <input type="text" name="regio" placeholder="Noord-Holland">
+        </div>
+        <div class="form-rij">
+            <label>Groeisignaal</label>
+            <input type="text" name="signaal" placeholder="Vacature: Account Manager">
+        </div>
+        <button type="submit" class="btn-primair" disabled title="Beschikbaar in Fase 2">Toevoegen (Fase 2)</button>
+    </form>
+</div>
+{% endblock %}

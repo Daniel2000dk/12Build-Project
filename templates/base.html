@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lead Automation{% endblock %} – Bouwsector NL</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Lead Automation</div>
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}actief{% endif %}">Dashboard</a>
+            <a href="{{ url_for('scanner') }}" class="{% if request.endpoint == 'scanner' %}actief{% endif %}">Leadfinder</a>
+            <a href="{{ url_for('notificaties') }}" class="{% if request.endpoint == 'notificaties' %}actief{% endif %}">
+                Meldingen
+                {% if notif_count > 0 %}
+                <span class="badge">{{ notif_count }}</span>
+                {% endif %}
+            </a>
+            <a href="{{ url_for('instellingen') }}" class="{% if request.endpoint == 'instellingen' %}actief{% endif %}">Instellingen</a>
+        </div>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

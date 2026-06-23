@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.bedrijfsnaam }}{% endblock %}
+
+{% block content %}
+<div class="pagina-header">
+    <a href="{{ url_for('dashboard') }}" class="terug">← Terug naar overzicht</a>
+    <h1>{{ lead.bedrijfsnaam }}</h1>
+    <span class="status-badge groot {{ lead.status }}">{{ lead.status | replace('_', ' ') | title }}</span>
+</div>
+
+<div class="detail-grid">
+    <!-- Linker kolom: bedrijfsinfo + contactpersonen -->
+    <div class="detail-links">
+        <div class="kaart">
+            <h3>Bedrijfsinformatie</h3>
+            <dl>
+                <dt>Website</dt><dd><a href="https://{{ lead.website }}" target="_blank">{{ lead.website }}</a></dd>
+                <dt>Sector</dt><dd>{{ lead.sector }}</dd>
+                <dt>Regio</dt><dd>{{ lead.regio }}</dd>
+                <dt>Grootte</dt><dd>{{ lead.grootte }}</dd>
+                <dt>Bron</dt><dd>{{ lead.bron }}</dd>
+                <dt>Groeisignaal</dt><dd>{{ lead.groeisignaal }}</dd>
+                <dt>Gevonden op</dt><dd>{{ lead.datum_gevonden[:10] }}</dd>
+            </dl>
+        </div>
+
+        {% if lead.contactpersonen %}
+        <div class="kaart">
+            <h3>Contactpersonen</h3>
+            {% for cp in lead.contactpersonen %}
+            <div class="contact-kaart vertrouwen-{{ cp.vertrouwen }}">
+                <div class="contact-naam">{{ cp.naam }}</div>
+                <div class="contact-functie">{{ cp.functie }}</div>
+                {% if cp.email %}<div class="contact-info">✉ {{ cp.email }}</div>{% endif %}
+                {% if cp.telefoon %}<div class="contact-info">📞 {{ cp.telefoon }}</div>{% endif %}
+                {% if cp.linkedin_url %}
+                <a href="https://{{ cp.linkedin_url }}" target="_blank" class="btn-linkedin">LinkedIn profiel →</a>
+                {% endif %}
+                <div class="vertrouwen-label">Vertrouwen: {{ cp.vertrouwen }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Status wijzigen -->
+        <div class="kaart">
+            <h3>Status wijzigen</h3>
+            <form method="POST" action="{{ url_for('wijzig_status', lead_id=lead.id) }}">
+                <select name="status" class="status-select">
+                    {% for s in ['gevonden','dmu_zoeken','berichten_klaar','linkedin_verstuurd','mail_verstuurd','reactie','heet','gebeld','koud'] %}
+                    <option value="{{ s }}" {% if lead.status == s %}selected{% endif %}>{{ s | replace('_', ' ') | title }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-primair">Opslaan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Rechter kolom: tijdlijn + berichten -->
+    <div class="detail-rechts">
+        {% if lead.berichten %}
+        <div class="kaart">
+            <h3>Berichten</h3>
+            {% for bericht in lead.berichten %}
+            <div class="bericht-kaart type-{{ bericht.type }}">
+                <div class="bericht-header">
+                    <span class="bericht-type">{{ 'LinkedIn' if bericht.type == 'linkedin' else 'Mail' }}</span>
+                    <span class="bericht-status">{{ bericht.status }}</span>
+                </div>
+                {% if bericht.onderwerp %}<div class="bericht-onderwerp">{{ bericht.onderwerp }}</div>{% endif %}
+                <div class="bericht-inhoud">{{ bericht.inhoud }}</div>
+                {% if bericht.type == 'linkedin' %}
+                <button class="btn-kopieer" onclick="kopieerTekst(this, '{{ bericht.inhoud | replace("'", "\\'") | replace('\n', '\\n') }}')">Kopieer</button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="kaart">
+            <h3>Tijdlijn</h3>
+            <div class="tijdlijn">
+                {% for actie in lead.acties %}
+                <div class="tijdlijn-item type-{{ actie.type }}">
+                    <div class="tijdlijn-datum">{{ actie.datum[:16] }}</div>
+                    <div class="tijdlijn-tekst">{{ actie.omschrijving }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

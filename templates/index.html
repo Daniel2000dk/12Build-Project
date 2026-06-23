@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="pagina-header">
+    <h1>Lead Overzicht</h1>
+    <span class="teller">{{ leads|length }} leads</span>
+</div>
+
+<!-- Statusflow balk -->
+<div class="statusflow">
+    <a href="?status=" class="stap {% if not actief_status %}actief-stap{% endif %}">Alle</a>
+    <a href="?status=gevonden" class="stap gevonden {% if actief_status == 'gevonden' %}actief-stap{% endif %}">Gevonden</a>
+    <span class="pijl">→</span>
+    <a href="?status=dmu_zoeken" class="stap dmu_zoeken {% if actief_status == 'dmu_zoeken' %}actief-stap{% endif %}">DMU zoeken</a>
+    <span class="pijl">→</span>
+    <a href="?status=berichten_klaar" class="stap berichten_klaar {% if actief_status == 'berichten_klaar' %}actief-stap{% endif %}">Berichten klaar</a>
+    <span class="pijl">→</span>
+    <a href="?status=linkedin_verstuurd" class="stap linkedin_verstuurd {% if actief_status == 'linkedin_verstuurd' %}actief-stap{% endif %}">LinkedIn</a>
+    <span class="pijl">→</span>
+    <a href="?status=mail_verstuurd" class="stap mail_verstuurd {% if actief_status == 'mail_verstuurd' %}actief-stap{% endif %}">Mail verstuurd</a>
+    <span class="pijl">→</span>
+    <a href="?status=reactie" class="stap reactie {% if actief_status == 'reactie' %}actief-stap{% endif %}">Reactie</a>
+    <span class="pijl">→</span>
+    <a href="?status=heet" class="stap heet {% if actief_status == 'heet' %}actief-stap{% endif %}">🔥 HEET</a>
+    <span class="pijl">→</span>
+    <a href="?status=gebeld" class="stap gebeld {% if actief_status == 'gebeld' %}actief-stap{% endif %}">Gebeld</a>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+    <form method="GET" action="/">
+        {% if actief_status %}<input type="hidden" name="status" value="{{ actief_status }}">{% endif %}
+        <select name="regio" onchange="this.form.submit()">
+            <option value="">Alle regio's</option>
+            {% for r in regio_opties %}
+            <option value="{{ r }}" {% if actief_regio == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+        </select>
+        <select name="sector" onchange="this.form.submit()">
+            <option value="">Alle sectoren</option>
+            {% for s in sector_opties %}
+            <option value="{{ s }}" {% if actief_sector == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        {% if actief_regio or actief_sector %}
+        <a href="{% if actief_status %}?status={{ actief_status }}{% else %}/{% endif %}" class="btn-reset">Wis filters</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Leads tabel -->
+{% if leads %}
+<table class="leads-tabel">
+    <thead>
+        <tr>
+            <th>Bedrijf</th>
+            <th>Sector</th>
+            <th>Regio</th>
+            <th>Signaal</th>
+            <th>Status</th>
+            <th>Volgende actie</th>
+            <th>Gevonden</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for lead in leads %}
+        <tr class="lead-rij status-{{ lead.status }}">
+            <td class="bedrijfsnaam">
+                <a href="{{ url_for('lead_detail', lead_id=lead.id) }}">{{ lead.bedrijfsnaam }}</a>
+                <small>{{ lead.website }}</small>
+            </td>
+            <td>{{ lead.sector }}</td>
+            <td>{{ lead.regio }}</td>
+            <td class="signaal">{{ lead.groeisignaal }}</td>
+            <td><span class="status-badge {{ lead.status }}">{{ lead.status | replace('_', ' ') | title }}</span></td>
+            <td class="volgende">{{ lead.volgende_actie }}</td>
+            <td class="datum">{{ lead.datum_gevonden[:10] }}</td>
+            <td><a href="{{ url_for('lead_detail', lead_id=lead.id) }}" class="btn-klein">Bekijk →</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="leeg">Geen leads gevonden voor deze filters.</div>
+{% endif %}
+{% endblock %}
