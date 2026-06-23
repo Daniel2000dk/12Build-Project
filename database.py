@@ -4,7 +4,9 @@ import os
 from datetime import datetime, timedelta
 import random
 
-DB_PATH = "leads.db"
+# Absoluut pad zodat de database altijd op de juiste plek staat (ook op PythonAnywhere)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "leads.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
