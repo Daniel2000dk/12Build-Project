@@ -4,52 +4,204 @@
 {% block content %}
 <div class="pagina-header">
     <h1>Leadfinder</h1>
-    <span class="fase-badge">Fase 2 – nog niet actief</span>
+    <p class="pagina-subtitel">Het systeem zoekt automatisch naar bouwbedrijven in Nederland</p>
 </div>
 
-<div class="kaart info-kaart">
-    <h3>Wat doet de Leadfinder?</h3>
-    <p>De leadfinder zoekt automatisch naar bouwbedrijven in Nederland die passen bij de doelgroep. Zoekbronnen:</p>
-    <ul>
-        <li>DuckDuckGo – "onderaannemer bouw Nederland capaciteit beschikbaar"</li>
-        <li>Indeed – vacatures voor account manager + bouw + Nederland</li>
-        <li>Nationale Vacaturebank – zelfde zoekopdrachten</li>
-        <li>Bouwend Nederland – ledenlijst</li>
-    </ul>
-    <p class="info-status">De leadfinder wordt gebouwd in <strong>Fase 2</strong>. Goedkeur dan hier nieuwe bedrijven.</p>
-</div>
+<!-- Scan starten -->
+<div class="kaart scanner-start">
+    <h3>Nieuwe scan uitvoeren</h3>
+    <p>Het systeem zoekt via DuckDuckGo en Indeed naar relevante bouwbedrijven. Kies het aantal zoekopdrachten (meer = meer resultaten, maar ook langer).</p>
 
-<div class="kaart">
-    <h3>Handmatig bedrijf toevoegen</h3>
-    <p>Voeg nu handmatig een bedrijf toe ter voorbereiding op Fase 2.</p>
-    <form class="formulier" action="#" method="POST">
-        <div class="form-rij">
-            <label>Bedrijfsnaam</label>
-            <input type="text" name="naam" placeholder="Van der Berg Bouwgroep" required>
-        </div>
-        <div class="form-rij">
-            <label>Website</label>
-            <input type="text" name="website" placeholder="vandenbergbouw.nl">
-        </div>
-        <div class="form-rij">
-            <label>Sector</label>
-            <select name="sector">
-                <option>Woningbouw</option>
-                <option>Utiliteitsbouw</option>
-                <option>Infra & GWW</option>
-                <option>Renovatie</option>
-                <option>Installatie</option>
+    <div class="scan-opties">
+        <label>
+            Zoekopdrachten:
+            <select id="max-zoekopdrachten">
+                <option value="2">2 – snel (1-2 min)</option>
+                <option value="5" selected>5 – standaard (3-5 min)</option>
+                <option value="10">10 – uitgebreid (8-12 min)</option>
             </select>
-        </div>
-        <div class="form-rij">
-            <label>Regio</label>
-            <input type="text" name="regio" placeholder="Noord-Holland">
-        </div>
-        <div class="form-rij">
-            <label>Groeisignaal</label>
-            <input type="text" name="signaal" placeholder="Vacature: Account Manager">
-        </div>
-        <button type="submit" class="btn-primair" disabled title="Beschikbaar in Fase 2">Toevoegen (Fase 2)</button>
-    </form>
+        </label>
+        <button id="scan-btn" class="btn-primair" onclick="startScan()">
+            Scan starten
+        </button>
+    </div>
+
+    <div id="scan-voortgang" class="scan-voortgang verborgen">
+        <div class="scan-spinner"></div>
+        <span id="scan-bericht">Bezig met zoeken...</span>
+    </div>
+    <div id="scan-klaar" class="scan-klaar verborgen">
+        <span id="scan-resultaat"></span>
+        <a href="/scanner" class="btn-secundair" style="margin-left: 12px;">Ververs pagina</a>
+    </div>
 </div>
+
+<!-- Kandidaten goedkeuren -->
+{% if kandidaten %}
+<div class="kandidaten-header">
+    <h2>Kandidaten &ndash; {{ kandidaten|length }} bedrijven wachten op goedkeuring</h2>
+    <button class="btn-gevaar" onclick="allesAfwijzen()">Alles afwijzen</button>
+</div>
+
+<div class="kandidaten-lijst" id="kandidaten-lijst">
+    {% for k in kandidaten %}
+    <div class="kandidaat-kaart" id="kandidaat-{{ k.id }}">
+        <div class="kandidaat-info">
+            <div class="kandidaat-naam">{{ k.naam }}</div>
+            <div class="kandidaat-meta">
+                <span class="badge grijs">{{ k.sector }}</span>
+                <span class="badge grijs">{{ k.regio }}</span>
+                <span class="kandidaat-bron">via {{ k.bron }}</span>
+            </div>
+            {% if k.website %}
+            <div class="kandidaat-website">
+                <a href="{{ k.website if k.website.startswith('http') else 'https://' + k.website }}" target="_blank">{{ k.website }}</a>
+            </div>
+            {% endif %}
+            {% if k.signaal %}
+            <div class="kandidaat-signaal">&#128204; {{ k.signaal }}</div>
+            {% endif %}
+            {% if k.omschrijving %}
+            <div class="kandidaat-omschrijving">{{ k.omschrijving[:150] }}{% if k.omschrijving|length > 150 %}&hellip;{% endif %}</div>
+            {% endif %}
+        </div>
+        <div class="kandidaat-acties">
+            <button class="btn-goedkeuren" onclick="goedkeuren({{ k.id }})">&#10003; Goedkeuren</button>
+            <button class="btn-afwijzen" onclick="afwijzen({{ k.id }})">&#10007; Afwijzen</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="leeg-blok">
+    <div class="leeg-icoon">&#128269;</div>
+    <h3>Geen kandidaten</h3>
+    <p>Start een scan om nieuwe bouwbedrijven te vinden. Gevonden bedrijven verschijnen hier ter goedkeuring.</p>
+</div>
+{% endif %}
+
+<script>
+var scanActief = false;
+
+function startScan() {
+    if (scanActief) return;
+
+    var maxOpdrachten = document.getElementById('max-zoekopdrachten').value;
+    var btn = document.getElementById('scan-btn');
+    var voortgang = document.getElementById('scan-voortgang');
+    var klaar = document.getElementById('scan-klaar');
+
+    btn.disabled = true;
+    btn.textContent = 'Bezig...';
+    voortgang.classList.remove('verborgen');
+    klaar.classList.add('verborgen');
+    scanActief = true;
+
+    fetch('/api/scanner/start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({max_zoekopdrachten: parseInt(maxOpdrachten)})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            peilScanStatus();
+        } else {
+            toonFout(data.bericht);
+        }
+    })
+    .catch(function(e) { toonFout('Verbindingsfout: ' + e.message); });
+}
+
+function peilScanStatus() {
+    var interval = setInterval(function() {
+        fetch('/api/scanner/status')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            document.getElementById('scan-bericht').textContent = data.bericht || 'Bezig...';
+
+            if (!data.actief) {
+                clearInterval(interval);
+                scanActief = false;
+                document.getElementById('scan-voortgang').classList.add('verborgen');
+
+                var klaar = document.getElementById('scan-klaar');
+                var resultaat = document.getElementById('scan-resultaat');
+                klaar.classList.remove('verborgen');
+
+                if (data.gevonden > 0) {
+                    resultaat.textContent = '✓ ' + data.gevonden + ' nieuwe kandidaten gevonden';
+                    resultaat.className = 'scan-succes';
+                } else {
+                    resultaat.textContent = data.bericht || 'Scan voltooid';
+                    resultaat.className = '';
+                }
+
+                var btn = document.getElementById('scan-btn');
+                btn.disabled = false;
+                btn.textContent = 'Scan starten';
+            }
+        })
+        .catch(function() {});
+    }, 3000);
+}
+
+function toonFout(bericht) {
+    scanActief = false;
+    document.getElementById('scan-voortgang').classList.add('verborgen');
+    var btn = document.getElementById('scan-btn');
+    btn.disabled = false;
+    btn.textContent = 'Scan starten';
+    alert('Fout: ' + bericht);
+}
+
+function goedkeuren(id) {
+    fetch('/api/scanner/goedkeuren/' + id, {method: 'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            var kaart = document.getElementById('kandidaat-' + id);
+            kaart.style.background = '#e8f5e9';
+            kaart.style.borderColor = '#4caf50';
+            setTimeout(function() { kaart.remove(); updateTeller(-1); }, 600);
+        }
+    });
+}
+
+function afwijzen(id) {
+    fetch('/api/scanner/afwijzen/' + id, {method: 'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            var kaart = document.getElementById('kandidaat-' + id);
+            kaart.style.opacity = '0.3';
+            setTimeout(function() { kaart.remove(); updateTeller(-1); }, 400);
+        }
+    });
+}
+
+function allesAfwijzen() {
+    if (!confirm('Alle kandidaten afwijzen en verwijderen?')) return;
+    fetch('/api/scanner/alles-afwijzen', {method: 'POST'})
+    .then(function() { window.location.reload(); });
+}
+
+function updateTeller(delta) {
+    var header = document.querySelector('.kandidaten-header h2');
+    if (!header) return;
+    var match = header.textContent.match(/(\d+)/);
+    if (match) {
+        var nieuw = parseInt(match[1]) + delta;
+        if (nieuw <= 0) {
+            var headerEl = document.querySelector('.kandidaten-header');
+            if (headerEl) headerEl.remove();
+            var lijst = document.getElementById('kandidaten-lijst');
+            if (lijst) lijst.innerHTML = '<p style="padding:24px;color:#666">Alle kandidaten verwerkt.</p>';
+        } else {
+            header.textContent = 'Kandidaten – ' + nieuw + ' bedrijven wachten op goedkeuring';
+        }
+    }
+}
+</script>
 {% endblock %}

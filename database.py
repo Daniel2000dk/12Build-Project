@@ -304,3 +304,129 @@ def get_unieke_waarden(kolom):
     waarden = [r[0] for r in c.fetchall() if r[0]]
     conn.close()
     return waarden
+
+# ─── Fase 2: Kandidaat leads (wachten op goedkeuring) ───────────────────────
+
+def init_kandidaten_tabel():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS kandidaat_leads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            naam TEXT NOT NULL,
+            website TEXT,
+            sector TEXT,
+            regio TEXT,
+            bron TEXT,
+            signaal TEXT,
+            omschrijving TEXT,
+            datum_gevonden TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def sla_kandidaten_op(kandidaten):
+    """Slaat lijst van gevonden bedrijven op als kandidaat leads (nog niet goedgekeurd)."""
+    conn = get_db()
+    c = conn.cursor()
+
+    # Bestaande kandidaten ophalen om dubbelen te voorkomen
+    c.execute("SELECT naam, website FROM kandidaat_leads")
+    bestaand = {(r[0].lower(), r[1] or '') for r in c.fetchall()}
+
+    # Bestaande leads ook checken
+    c.execute("SELECT bedrijfsnaam, website FROM leads")
+    bestaande_leads = {(r[0].lower(), r[1] or '') for r in c.fetchall()}
+
+    nu = datetime.now().strftime("%Y-%m-%d %H:%M")
+    toegevoegd = 0
+
+    for k in kandidaten:
+        naam_lower = k.get('naam', '').lower()
+        website = k.get('website', '') or ''
+
+        if (naam_lower, website) in bestaand:
+            continue
+        if naam_lower in {n for n, w in bestaande_leads}:
+            continue
+
+        c.execute("""
+            INSERT INTO kandidaat_leads (naam, website, sector, regio, bron, signaal, omschrijving, datum_gevonden)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            k.get('naam', ''),
+            website,
+            k.get('sector', 'Bouw'),
+            k.get('regio', 'Nederland'),
+            k.get('bron', ''),
+            k.get('signaal', ''),
+            k.get('omschrijving', ''),
+            nu
+        ))
+        toegevoegd += 1
+
+    conn.commit()
+    conn.close()
+    return toegevoegd
+
+def get_alle_kandidaten():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM kandidaat_leads ORDER BY datum_gevonden DESC")
+    kandidaten = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return kandidaten
+
+def get_kandidaten_count():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM kandidaat_leads")
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+def keur_kandidaat_goed(kandidaat_id):
+    """Zet kandidaat om naar echte lead (status: gevonden)."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM kandidaat_leads WHERE id = ?", (kandidaat_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return None
+
+    k = dict(row)
+    nu = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    c.execute("""
+        INSERT INTO leads (bedrijfsnaam, website, sector, regio, grootte, bron, groeisignaal, status, datum_gevonden, laatste_actie, volgende_actie)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'gevonden', ?, ?, ?)
+    """, (
+        k['naam'], k['website'], k['sector'], k['regio'],
+        'Onbekend', k['bron'], k['signaal'], nu, nu, 'DMU opzoeken'
+    ))
+    lead_id = c.lastrowid
+
+    c.execute("INSERT INTO acties (lead_id, type, omschrijving, datum) VALUES (?, 'gevonden', ?, ?)",
+              (lead_id, f"Bedrijf goedgekeurd vanuit scanner – {k['bron']}", nu))
+
+    c.execute("DELETE FROM kandidaat_leads WHERE id = ?", (kandidaat_id,))
+    conn.commit()
+    conn.close()
+    return lead_id
+
+def wijs_kandidaat_af(kandidaat_id):
+    """Verwijdert kandidaat definitief."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM kandidaat_leads WHERE id = ?", (kandidaat_id,))
+    conn.commit()
+    conn.close()
+
+def verwijder_alle_kandidaten():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM kandidaat_leads")
+    conn.commit()
+    conn.close()

@@ -11,8 +11,9 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(path, '.env'))
 
 # Database initialiseren bij eerste start
-from database import init_db, laad_mock_data
+from database import init_db, laad_mock_data, init_kandidaten_tabel
 init_db()
+init_kandidaten_tabel()
 laad_mock_data()
 
 from app import app as application

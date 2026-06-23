@@ -1,16 +1,35 @@
 import os
+import threading
+import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from dotenv import load_dotenv
-from database import init_db, laad_mock_data, get_alle_leads, get_lead, get_hete_leads, get_notificaties_count, update_lead_status, markeer_notificatie_gelezen, get_unieke_waarden
+from database import (
+    init_db, laad_mock_data, init_kandidaten_tabel,
+    get_alle_leads, get_lead, get_hete_leads, get_notificaties_count,
+    update_lead_status, markeer_notificatie_gelezen, get_unieke_waarden,
+    get_alle_kandidaten, get_kandidaten_count, sla_kandidaten_op,
+    keur_kandidaat_goed, wijs_kandidaat_af, verwijder_alle_kandidaten
+)
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-vervang-dit")
 
+# Scan status bijhouden (in-memory, verdwijnt bij herstart)
+scan_status = {"actief": False, "bericht": "", "gevonden": 0}
+
 @app.context_processor
-def inject_notif_count():
-    return {"notif_count": get_notificaties_count()}
+def inject_globals():
+    return {
+        "notif_count": get_notificaties_count(),
+        "kandidaten_count": get_kandidaten_count()
+    }
+
+# ─── Dashboard ───────────────────────────────────────────────────────────────
 
 @app.route("/")
 def dashboard():
@@ -24,6 +43,8 @@ def dashboard():
                            sector_opties=sector_opties, actief_status=status_filter,
                            actief_regio=regio_filter, actief_sector=sector_filter)
 
+# ─── Lead detail ─────────────────────────────────────────────────────────────
+
 @app.route("/lead/<int:lead_id>")
 def lead_detail(lead_id):
     lead = get_lead(lead_id)
@@ -36,6 +57,8 @@ def wijzig_status(lead_id):
         update_lead_status(lead_id, nieuwe_status)
     return redirect(url_for("lead_detail", lead_id=lead_id))
 
+# ─── Notificaties ────────────────────────────────────────────────────────────
+
 @app.route("/notificaties")
 def notificaties():
     leads = get_hete_leads()
@@ -46,13 +69,71 @@ def markeer_gelezen(notif_id):
     markeer_notificatie_gelezen(notif_id)
     return redirect(url_for("notificaties"))
 
+# ─── Scanner (Fase 2) ────────────────────────────────────────────────────────
+
 @app.route("/scanner")
 def scanner():
-    return render_template("scanner.html")
+    kandidaten = get_alle_kandidaten()
+    return render_template("scanner.html", kandidaten=kandidaten, scan_status=scan_status)
+
+@app.route("/api/scanner/start", methods=["POST"])
+def start_scan():
+    global scan_status
+    if scan_status["actief"]:
+        return jsonify({"ok": False, "bericht": "Scan is al bezig"})
+
+    max_zoekopdrachten = int(request.json.get("max_zoekopdrachten", 3))
+
+    def voer_scan_uit():
+        global scan_status
+        scan_status = {"actief": True, "bericht": "Scan gestart...", "gevonden": 0}
+        try:
+            from modules.leadfinder import run_leadfinder
+            scan_status["bericht"] = "Zoeken naar bouwbedrijven..."
+            resultaten = run_leadfinder(max_zoekopdrachten=max_zoekopdrachten)
+            toegevoegd = sla_kandidaten_op(resultaten)
+            scan_status["gevonden"] = toegevoegd
+            scan_status["bericht"] = f"Klaar – {toegevoegd} nieuwe kandidaten gevonden"
+        except Exception as e:
+            logger.error(f"Scan fout: {e}")
+            scan_status["bericht"] = f"Fout tijdens scan: {str(e)[:100]}"
+        finally:
+            scan_status["actief"] = False
+
+    t = threading.Thread(target=voer_scan_uit, daemon=True)
+    t.start()
+    return jsonify({"ok": True, "bericht": "Scan gestart"})
+
+@app.route("/api/scanner/status")
+def scan_status_api():
+    return jsonify(scan_status)
+
+@app.route("/api/scanner/goedkeuren/<int:kandidaat_id>", methods=["POST"])
+def goedkeuren(kandidaat_id):
+    lead_id = keur_kandidaat_goed(kandidaat_id)
+    if lead_id:
+        return jsonify({"ok": True, "lead_id": lead_id})
+    return jsonify({"ok": False}), 404
+
+@app.route("/api/scanner/afwijzen/<int:kandidaat_id>", methods=["POST"])
+def afwijzen(kandidaat_id):
+    wijs_kandidaat_af(kandidaat_id)
+    return jsonify({"ok": True})
+
+@app.route("/api/scanner/alles-afwijzen", methods=["POST"])
+def alles_afwijzen():
+    verwijder_alle_kandidaten()
+    return jsonify({"ok": True})
+
+# ─── Instellingen ────────────────────────────────────────────────────────────
 
 @app.route("/instellingen")
 def instellingen():
-    return render_template("instellingen.html")
+    gmail_ok = bool(os.getenv("GMAIL_ADDRESS") and os.getenv("GMAIL_APP_PASSWORD"))
+    anthropic_ok = bool(os.getenv("ANTHROPIC_API_KEY"))
+    return render_template("instellingen.html", gmail_ok=gmail_ok, anthropic_ok=anthropic_ok)
+
+# ─── API ─────────────────────────────────────────────────────────────────────
 
 @app.route("/api/leads")
 def api_leads():
@@ -61,5 +142,6 @@ def api_leads():
 
 if __name__ == "__main__":
     init_db()
+    init_kandidaten_tabel()
     laad_mock_data()
     app.run(debug=True, port=5000)

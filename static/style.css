@@ -485,3 +485,159 @@ code {
     font-size: 14px;
     line-height: 1.8;
 }
+
+/* PAGINA SUBTITEL */
+.pagina-subtitel { color: var(--tekst-licht); font-size: 13px; margin-top: 4px; margin-left: auto; }
+
+/* SCANNER */
+.scanner-start { margin-bottom: 24px; }
+.scanner-start p { color: var(--tekst-licht); font-size: 13px; margin-bottom: 16px; }
+
+.scan-opties {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.scan-opties label {
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.scan-opties select {
+    padding: 7px 12px;
+    border: 1px solid var(--rand);
+    border-radius: 7px;
+    font-size: 13px;
+    background: var(--wit);
+}
+
+.scan-voortgang {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--tekst-licht);
+}
+
+.scan-spinner {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #e0e0e0;
+    border-top-color: #1a1a2e;
+    border-radius: 50%;
+    animation: draai 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes draai { to { transform: rotate(360deg); } }
+
+.scan-klaar { margin-top: 14px; display: flex; align-items: center; }
+.scan-succes { color: #2e7d32; font-weight: 600; font-size: 13px; }
+.verborgen { display: none !important; }
+
+/* KANDIDATEN */
+.kandidaten-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.kandidaten-header h2 { font-size: 16px; font-weight: 700; }
+
+.btn-gevaar {
+    background: #ffebee;
+    color: #b71c1c;
+    border: 1px solid #ffcdd2;
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-gevaar:hover { background: #ffcdd2; }
+
+.kandidaten-lijst { display: flex; flex-direction: column; gap: 10px; }
+
+.kandidaat-kaart {
+    background: var(--wit);
+    border: 1px solid var(--rand);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    transition: all 0.3s;
+}
+
+.kandidaat-info { flex: 1; }
+.kandidaat-naam { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+
+.kandidaat-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.badge.grijs { background: #f5f5f5; color: #555; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+.kandidaat-bron { font-size: 12px; color: var(--tekst-licht); }
+.kandidaat-website { font-size: 12px; margin-bottom: 4px; }
+.kandidaat-website a { color: #3f51b5; text-decoration: none; }
+.kandidaat-website a:hover { text-decoration: underline; }
+.kandidaat-signaal { font-size: 12px; color: #333; margin-bottom: 4px; }
+.kandidaat-omschrijving { font-size: 12px; color: var(--tekst-licht); line-height: 1.5; margin-top: 4px; }
+
+.kandidaat-acties {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-goedkeuren {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-goedkeuren:hover { background: #c8e6c9; }
+
+.btn-afwijzen {
+    background: #f5f5f5;
+    color: #666;
+    border: 1px solid #e0e0e0;
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-afwijzen:hover { background: #eeeeee; }
+
+/* LEEG BLOK */
+.leeg-blok {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--wit);
+    border: 1px dashed var(--rand);
+    border-radius: 10px;
+    margin-top: 8px;
+}
+.leeg-icoon { font-size: 36px; margin-bottom: 12px; }
+.leeg-blok h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.leeg-blok p { color: var(--tekst-licht); font-size: 13px; max-width: 400px; margin: 0 auto; }

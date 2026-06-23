@@ -12,26 +12,30 @@
         <p class="kaart-info">Vereist voor Fase 5 (mail versturen) en Fase 6 (reactie detectie).</p>
         <dl>
             <dt>Status</dt>
-            <dd class="status-label oranje">Nog niet geconfigureerd</dd>
+            <dd class="status-label {% if gmail_ok %}groen{% else %}oranje{% endif %}">
+                {% if gmail_ok %}Geconfigureerd{% else %}Nog niet geconfigureerd{% endif %}
+            </dd>
             <dt>Instructie</dt>
             <dd>Zet je Gmail-gegevens in het <code>.env</code> bestand:<br>
             <code>GMAIL_ADDRESS=jouw@gmail.com</code><br>
             <code>GMAIL_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx</code></dd>
         </dl>
-        <a href="https://myaccount.google.com/apppasswords" target="_blank" class="btn-secundair">App-wachtwoord aanmaken →</a>
+        <a href="https://myaccount.google.com/apppasswords" target="_blank" class="btn-secundair">App-wachtwoord aanmaken &rarr;</a>
     </div>
 
     <div class="kaart">
         <h3>Anthropic API</h3>
-        <p class="kaart-info">Vereist voor Fase 4 (berichten genereren). Kosten: ~€2-5/maand.</p>
+        <p class="kaart-info">Vereist voor Fase 4 (berichten genereren). Kosten: ~&euro;2-5/maand.</p>
         <dl>
             <dt>Status</dt>
-            <dd class="status-label oranje">Nog niet geconfigureerd</dd>
+            <dd class="status-label {% if anthropic_ok %}groen{% else %}oranje{% endif %}">
+                {% if anthropic_ok %}Geconfigureerd{% else %}Nog niet geconfigureerd{% endif %}
+            </dd>
             <dt>Instructie</dt>
             <dd>Zet je API key in het <code>.env</code> bestand:<br>
             <code>ANTHROPIC_API_KEY=sk-ant-...</code></dd>
         </dl>
-        <a href="https://platform.anthropic.com/settings/api-keys" target="_blank" class="btn-secundair">API key aanmaken →</a>
+        <a href="https://platform.anthropic.com/settings/api-keys" target="_blank" class="btn-secundair">API key aanmaken &rarr;</a>
     </div>
 
     <div class="kaart">
@@ -48,13 +52,13 @@
     <div class="kaart">
         <h3>Bouwfases</h3>
         <div class="fase-overzicht">
-            <div class="fase gereed">✓ Fase 1 – Interface &amp; database</div>
-            <div class="fase gepland">○ Fase 2 – Leadfinder</div>
-            <div class="fase gepland">○ Fase 3 – DMU Finder</div>
-            <div class="fase gepland">○ Fase 4 – AI berichtgenerator</div>
-            <div class="fase gepland">○ Fase 5 – Mail versturen</div>
-            <div class="fase gepland">○ Fase 6 – Reactie detectie</div>
-            <div class="fase gepland">○ Fase 7 – LinkedIn optimalisatie</div>
+            <div class="fase gereed">&#10003; Fase 1 &ndash; Interface &amp; database</div>
+            <div class="fase gereed">&#10003; Fase 2 &ndash; Leadfinder</div>
+            <div class="fase gepland">&#9675; Fase 3 &ndash; DMU Finder</div>
+            <div class="fase gepland">&#9675; Fase 4 &ndash; AI berichtgenerator</div>
+            <div class="fase gepland">&#9675; Fase 5 &ndash; Mail versturen</div>
+            <div class="fase gepland">&#9675; Fase 6 &ndash; Reactie detectie</div>
+            <div class="fase gepland">&#9675; Fase 7 &ndash; LinkedIn optimalisatie</div>
         </div>
     </div>
 </div>

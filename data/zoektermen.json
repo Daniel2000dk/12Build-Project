@@ -1,0 +1,57 @@
+{
+  "duckduckgo": [
+    "onderaannemer bouw Nederland capaciteit beschikbaar opdrachten",
+    "bouwbedrijf Nederland wij zoeken projecten",
+    "aannemer Nederland wij hebben capaciteit aanvragen",
+    "bouwbedrijf Nederland groei uitbreiding nieuw project",
+    "onderaannemer grondwerk Nederland contact samenwerking",
+    "installatietechniek bedrijf Nederland opdrachten zoeken",
+    "bouwbedrijf stukadoor schilder Nederland capaciteit",
+    "dakdekker loodgieter Nederland beschikbaar projecten",
+    "bouw toeleverancier Nederland klantenbestand uitbreiden",
+    "bouwbedrijf Nederland vacature accountmanager commercieel"
+  ],
+  "indeed_vacatures": [
+    {
+      "trefwoord": "accountmanager bouw",
+      "locatie": "Nederland",
+      "sector": "bouw"
+    },
+    {
+      "trefwoord": "commercieel directeur bouw",
+      "locatie": "Nederland",
+      "sector": "bouw"
+    },
+    {
+      "trefwoord": "salesmanager bouwmaterialen",
+      "locatie": "Nederland",
+      "sector": "bouw"
+    },
+    {
+      "trefwoord": "inkoper bouwbedrijf",
+      "locatie": "Nederland",
+      "sector": "bouw"
+    },
+    {
+      "trefwoord": "projectleider onderaannemer",
+      "locatie": "Nederland",
+      "sector": "bouw"
+    }
+  ],
+  "filter_keywords": {
+    "relevant": [
+      "bouw", "aannemer", "onderaannemer", "installatie", "grondwerk",
+      "dakdekker", "stukadoor", "schilder", "loodgieter", "elektra",
+      "renovatie", "nieuwbouw", "vastgoed", "infra", "constructie",
+      "bouwmaterialen", "toeleverancier", "projectontwikkeling"
+    ],
+    "irrelevant": [
+      "vacaturebank", "werken bij", "jobs", "nieuws", "wikipedia",
+      "facebook", "twitter", "instagram", "youtube", "forum"
+    ]
+  },
+  "min_medewerkers_signalen": [
+    "medewerkers", "mensen", "personen", "team", "collega",
+    "fte", "professionals", "medewerker"
+  ]
+}
