@@ -9,7 +9,8 @@ from database import (
     update_lead_status, markeer_notificatie_gelezen, get_unieke_waarden,
     get_alle_kandidaten, get_kandidaten_count, sla_kandidaten_op,
     keur_kandidaat_goed, wijs_kandidaat_af, verwijder_alle_kandidaten,
-    voeg_contactpersoon_toe, verwijder_automatische_contactpersonen, sla_kvk_info_op
+    voeg_contactpersoon_toe, verwijder_automatische_contactpersonen, sla_kvk_info_op,
+    heeft_berichten, verwijder_berichten, sla_berichten_op, markeer_bericht_verstuurd
 )
 
 load_dotenv()
@@ -206,13 +207,71 @@ def contact_toevoegen():
     update_lead_status(lead_id, "dmu_zoeken")
     return jsonify({"ok": True})
 
+# ─── AI Berichten (Fase 4) ───────────────────────────────────────────────────
+
+ai_status = {}
+
+@app.route("/api/berichten/genereer/<int:lead_id>", methods=["POST"])
+def genereer_berichten(lead_id):
+    global ai_status
+    if ai_status.get(lead_id, {}).get("actief"):
+        return jsonify({"ok": False, "bericht": "Al bezig met genereren"})
+
+    lead = get_lead(lead_id)
+    if not lead:
+        return jsonify({"ok": False}), 404
+    if not lead.get("contactpersonen"):
+        return jsonify({"ok": False, "bericht": "Voeg eerst een contactpersoon toe"}), 400
+
+    hergeneer = request.json.get("hergeneer", False) if request.json else False
+    ai_status[lead_id] = {"actief": True, "bericht": "Berichten genereren...", "klaar": False, "fout": ""}
+
+    def genereer():
+        try:
+            from modules.ai_writer import run_ai_writer
+            contactpersoon = lead["contactpersonen"][0]
+
+            ai_status[lead_id]["bericht"] = "LinkedIn bericht schrijven..."
+            resultaat = run_ai_writer(lead, contactpersoon)
+
+            if hergeneer:
+                verwijder_berichten(lead_id)
+
+            sla_berichten_op(
+                lead_id=lead_id,
+                cp_id=contactpersoon["id"],
+                linkedin=resultaat["linkedin"],
+                mail_onderwerp=resultaat["mail_onderwerp"],
+                mail_inhoud=resultaat["mail_inhoud"],
+                followup_onderwerp=resultaat["followup_onderwerp"],
+                followup_inhoud=resultaat["followup_inhoud"],
+            )
+            update_lead_status(lead_id, "berichten_klaar")
+            ai_status[lead_id] = {"actief": False, "bericht": "Berichten gegenereerd", "klaar": True, "fout": ""}
+        except Exception as e:
+            logger.error(f"AI Writer fout voor lead {lead_id}: {e}")
+            ai_status[lead_id] = {"actief": False, "bericht": "", "klaar": False, "fout": str(e)[:150]}
+
+    t = threading.Thread(target=genereer, daemon=True)
+    t.start()
+    return jsonify({"ok": True})
+
+@app.route("/api/berichten/status/<int:lead_id>")
+def berichten_status(lead_id):
+    return jsonify(ai_status.get(lead_id, {"actief": False, "bericht": "", "klaar": False, "fout": ""}))
+
+@app.route("/api/berichten/markeer/<int:bericht_id>", methods=["POST"])
+def bericht_markeer_verstuurd(bericht_id):
+    markeer_bericht_verstuurd(bericht_id)
+    return jsonify({"ok": True})
+
 # ─── Instellingen ────────────────────────────────────────────────────────────
 
 @app.route("/instellingen")
 def instellingen():
     gmail_ok = bool(os.getenv("GMAIL_ADDRESS") and os.getenv("GMAIL_APP_PASSWORD"))
-    anthropic_ok = bool(os.getenv("ANTHROPIC_API_KEY"))
-    return render_template("instellingen.html", gmail_ok=gmail_ok, anthropic_ok=anthropic_ok)
+    gemini_ok = bool(os.getenv("GEMINI_API_KEY"))
+    return render_template("instellingen.html", gmail_ok=gmail_ok, gemini_ok=gemini_ok)
 
 # ─── API ─────────────────────────────────────────────────────────────────────
 

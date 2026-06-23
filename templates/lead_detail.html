@@ -131,24 +131,51 @@
 
     <!-- Rechter kolom: berichten + tijdlijn -->
     <div class="detail-rechts">
-        {% if lead.berichten %}
         <div class="kaart">
-            <h3>Berichten</h3>
-            {% for bericht in lead.berichten %}
-            <div class="bericht-kaart type-{{ bericht.type }}">
-                <div class="bericht-header">
-                    <span class="bericht-type">{{ 'LinkedIn' if bericht.type == 'linkedin' else 'Mail' }}</span>
-                    <span class="bericht-status">{{ bericht.status }}</span>
-                </div>
-                {% if bericht.onderwerp %}<div class="bericht-onderwerp">{{ bericht.onderwerp }}</div>{% endif %}
-                <div class="bericht-inhoud">{{ bericht.inhoud }}</div>
-                {% if bericht.type == 'linkedin' %}
-                <button class="btn-kopieer" onclick="kopieerTekst(this, '{{ bericht.inhoud | replace("'", "\\'") | replace('\n', '\\n') }}')">Kopieer</button>
+            <div class="kaart-header-rij">
+                <h3>Berichten</h3>
+                {% if lead.contactpersonen %}
+                <button id="genereer-btn" class="btn-secundair btn-klein-link" onclick="genereerBerichten({{ lead.id }}, {{ 'true' if lead.berichten else 'false' }})">
+                    {% if lead.berichten %}Hergeneer{% else %}Genereer berichten{% endif %}
+                </button>
                 {% endif %}
             </div>
-            {% endfor %}
+
+            <div id="genereer-voortgang" style="display:none; align-items:center; gap:10px; padding:8px 0; margin-bottom:8px;">
+                <div class="scan-spinner"></div>
+                <span id="genereer-bericht-tekst" style="font-size:13px; color:#555;">Berichten genereren via AI...</span>
+            </div>
+            <div id="genereer-melding" style="display:none; font-size:13px; padding:8px 0;"></div>
+
+            <div id="berichten-lijst">
+            {% if lead.berichten %}
+                {% for bericht in lead.berichten %}
+                <div class="bericht-kaart type-{{ bericht.type }}">
+                    <div class="bericht-header">
+                        <span class="bericht-type">
+                            {% if bericht.type == 'linkedin' %}LinkedIn{% elif bericht.type == 'followup' %}Follow-up mail{% else %}Eerste mail{% endif %}
+                        </span>
+                        <span class="bericht-status {% if bericht.status == 'verstuurd' %}verstuurd{% endif %}">{{ bericht.status }}</span>
+                    </div>
+                    {% if bericht.onderwerp %}<div class="bericht-onderwerp">{{ bericht.onderwerp }}</div>{% endif %}
+                    <div class="bericht-inhoud">{{ bericht.inhoud }}</div>
+                    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                        {% if bericht.type == 'linkedin' %}
+                        <button class="btn-kopieer" onclick="kopieerTekst(this, {{ bericht.inhoud | tojson }})">Kopieer</button>
+                        {% endif %}
+                        {% if bericht.status != 'verstuurd' %}
+                        <button class="btn-secundair btn-klein-link" onclick="markeerVerstuurd({{ bericht.id }}, this)">Markeer verstuurd</button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% elif lead.contactpersonen %}
+                <p style="color:#888; font-size:13px; margin:0 0 4px;">Nog geen berichten. Klik "Genereer berichten" om AI-berichten aan te maken voor {{ lead.contactpersonen[0].naam }}.</p>
+            {% else %}
+                <p style="color:#888; font-size:13px; margin:0;">Voeg eerst een contactpersoon toe om berichten te kunnen genereren.</p>
+            {% endif %}
+            </div>
         </div>
-        {% endif %}
 
         <div class="kaart">
             <h3>Tijdlijn</h3>
@@ -272,6 +299,100 @@ function slaContactOp(leadId) {
             fout.textContent = data.bericht || 'Fout bij opslaan';
             fout.style.display = 'block';
         }
+    });
+}
+
+var aiActief = false;
+
+function genereerBerichten(leadId, hergeneer) {
+    if (aiActief) return;
+    aiActief = true;
+    var btn = document.getElementById('genereer-btn');
+    var voortgang = document.getElementById('genereer-voortgang');
+    var melding = document.getElementById('genereer-melding');
+    btn.disabled = true;
+    btn.textContent = 'Genereren...';
+    voortgang.style.display = 'flex';
+    melding.style.display = 'none';
+
+    fetch('/api/berichten/genereer/' + leadId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({hergeneer: hergeneer})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            peilAIStatus(leadId);
+        } else {
+            stopAI(data.bericht || 'Fout bij starten');
+        }
+    })
+    .catch(function() { stopAI('Verbindingsfout'); });
+}
+
+function peilAIStatus(leadId) {
+    var interval = setInterval(function() {
+        fetch('/api/berichten/status/' + leadId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.bericht) {
+                document.getElementById('genereer-bericht-tekst').textContent = data.bericht;
+            }
+            if (!data.actief) {
+                clearInterval(interval);
+                document.getElementById('genereer-voortgang').style.display = 'none';
+                aiActief = false;
+                var btn = document.getElementById('genereer-btn');
+                btn.disabled = false;
+
+                if (data.fout) {
+                    toonAIMelding('Fout: ' + data.fout, '#c62828');
+                    btn.textContent = 'Opnieuw proberen';
+                } else if (data.klaar) {
+                    toonAIMelding('Berichten klaar – pagina wordt herladen...', '#2e7d32');
+                    setTimeout(function() { window.location.reload(); }, 1200);
+                }
+            }
+        })
+        .catch(function() {});
+    }, 2000);
+}
+
+function stopAI(bericht) {
+    aiActief = false;
+    document.getElementById('genereer-voortgang').style.display = 'none';
+    var btn = document.getElementById('genereer-btn');
+    btn.disabled = false;
+    btn.textContent = 'Genereer berichten';
+    toonAIMelding(bericht, '#c62828');
+}
+
+function toonAIMelding(tekst, kleur) {
+    var el = document.getElementById('genereer-melding');
+    el.textContent = tekst;
+    el.style.color = kleur;
+    el.style.display = 'block';
+}
+
+function markeerVerstuurd(berichtId, btn) {
+    fetch('/api/berichten/markeer/' + berichtId, {method: 'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            btn.textContent = '✓ Verstuurd';
+            btn.disabled = true;
+            var statusEl = btn.closest('.bericht-kaart').querySelector('.bericht-status');
+            if (statusEl) { statusEl.textContent = 'verstuurd'; statusEl.classList.add('verstuurd'); }
+        }
+    });
+}
+
+function kopieerTekst(btn, tekst) {
+    navigator.clipboard.writeText(tekst).then(function() {
+        var orig = btn.textContent;
+        btn.textContent = '✓ Gekopieerd';
+        setTimeout(function() { btn.textContent = orig; }, 2000);
     });
 }
 </script>

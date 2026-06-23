@@ -24,18 +24,18 @@
     </div>
 
     <div class="kaart">
-        <h3>Anthropic API</h3>
-        <p class="kaart-info">Vereist voor Fase 4 (berichten genereren). Kosten: ~&euro;2-5/maand.</p>
+        <h3>Gemini API</h3>
+        <p class="kaart-info">Vereist voor Fase 4 (berichten genereren). Gratis: 15 verzoeken per minuut, 1M tokens per dag.</p>
         <dl>
             <dt>Status</dt>
-            <dd class="status-label {% if anthropic_ok %}groen{% else %}oranje{% endif %}">
-                {% if anthropic_ok %}Geconfigureerd{% else %}Nog niet geconfigureerd{% endif %}
+            <dd class="status-label {% if gemini_ok %}groen{% else %}oranje{% endif %}">
+                {% if gemini_ok %}Geconfigureerd{% else %}Nog niet geconfigureerd{% endif %}
             </dd>
             <dt>Instructie</dt>
             <dd>Zet je API key in het <code>.env</code> bestand:<br>
-            <code>ANTHROPIC_API_KEY=sk-ant-...</code></dd>
+            <code>GEMINI_API_KEY=AIzaSy...</code></dd>
         </dl>
-        <a href="https://platform.anthropic.com/settings/api-keys" target="_blank" class="btn-secundair">API key aanmaken &rarr;</a>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn-secundair">API key aanmaken &rarr;</a>
     </div>
 
     <div class="kaart">
@@ -54,8 +54,8 @@
         <div class="fase-overzicht">
             <div class="fase gereed">&#10003; Fase 1 &ndash; Interface &amp; database</div>
             <div class="fase gereed">&#10003; Fase 2 &ndash; Leadfinder</div>
-            <div class="fase gepland">&#9675; Fase 3 &ndash; DMU Finder</div>
-            <div class="fase gepland">&#9675; Fase 4 &ndash; AI berichtgenerator</div>
+            <div class="fase gereed">&#10003; Fase 3 &ndash; DMU Finder</div>
+            <div class="fase gereed">&#10003; Fase 4 &ndash; AI berichtgenerator</div>
             <div class="fase gepland">&#9675; Fase 5 &ndash; Mail versturen</div>
             <div class="fase gepland">&#9675; Fase 6 &ndash; Reactie detectie</div>
             <div class="fase gepland">&#9675; Fase 7 &ndash; LinkedIn optimalisatie</div>

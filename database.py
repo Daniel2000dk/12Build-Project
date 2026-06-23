@@ -457,6 +457,56 @@ def verwijder_automatische_contactpersonen(lead_id):
     conn.commit()
     conn.close()
 
+# ─── Fase 4: AI Berichten ────────────────────────────────────────────────────
+
+def heeft_berichten(lead_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM berichten WHERE lead_id = ?", (lead_id,))
+    count = c.fetchone()[0]
+    conn.close()
+    return count > 0
+
+def verwijder_berichten(lead_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM berichten WHERE lead_id = ?", (lead_id,))
+    conn.commit()
+    conn.close()
+
+def sla_berichten_op(lead_id, cp_id, linkedin, mail_onderwerp, mail_inhoud, followup_onderwerp, followup_inhoud):
+    conn = get_db()
+    c = conn.cursor()
+    nu = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    c.execute("""
+        INSERT INTO berichten (lead_id, contactpersoon_id, type, onderwerp, inhoud, status, datum_aangemaakt)
+        VALUES (?, ?, 'linkedin', NULL, ?, 'concept', ?)
+    """, (lead_id, cp_id, linkedin, nu))
+
+    c.execute("""
+        INSERT INTO berichten (lead_id, contactpersoon_id, type, onderwerp, inhoud, status, datum_aangemaakt)
+        VALUES (?, ?, 'mail', ?, ?, 'concept', ?)
+    """, (lead_id, cp_id, mail_onderwerp, mail_inhoud, nu))
+
+    c.execute("""
+        INSERT INTO berichten (lead_id, contactpersoon_id, type, onderwerp, inhoud, status, datum_aangemaakt)
+        VALUES (?, ?, 'followup', ?, ?, 'concept', ?)
+    """, (lead_id, cp_id, followup_onderwerp, followup_inhoud, nu))
+
+    c.execute("INSERT INTO acties (lead_id, type, omschrijving, datum) VALUES (?, 'bericht', 'AI berichten gegenereerd via Gemini', ?)",
+              (lead_id, nu))
+    conn.commit()
+    conn.close()
+
+def markeer_bericht_verstuurd(bericht_id):
+    conn = get_db()
+    c = conn.cursor()
+    nu = datetime.now().strftime("%Y-%m-%d %H:%M")
+    c.execute("UPDATE berichten SET status = 'verstuurd', datum_verstuurd = ? WHERE id = ?", (nu, bericht_id))
+    conn.commit()
+    conn.close()
+
 def sla_kvk_info_op(lead_id, kvk_info):
     """Slaat KVK-info op als notitie bij de lead."""
     if not kvk_info.get('kvk_nummer') and not kvk_info.get('rechtsvorm'):
