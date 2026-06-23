@@ -9,79 +9,96 @@
 </div>
 
 <div class="detail-grid">
-    <!-- Linker kolom: bedrijfsinfo + contactpersonen -->
+    <!-- Linker kolom -->
     <div class="detail-links">
+
         <div class="kaart">
             <h3>Bedrijfsinformatie</h3>
             <dl>
                 <dt>Website</dt>
-                <dd>
-                    {% if lead.website %}
-                    <a href="{{ lead.website if lead.website.startswith('http') else 'https://' + lead.website }}" target="_blank">{{ lead.website }}</a>
-                    {% else %}&ndash;{% endif %}
-                </dd>
+                <dd>{% if lead.website %}<a href="{{ lead.website if lead.website.startswith('http') else 'https://' + lead.website }}" target="_blank">{{ lead.website }}</a>{% else %}&ndash;{% endif %}</dd>
                 <dt>Sector</dt><dd>{{ lead.sector or '&ndash;' }}</dd>
                 <dt>Regio</dt><dd>{{ lead.regio or '&ndash;' }}</dd>
                 <dt>Grootte</dt><dd>{{ lead.grootte or '&ndash;' }}</dd>
                 <dt>Bron</dt><dd>{{ lead.bron or '&ndash;' }}</dd>
                 <dt>Signaal</dt><dd>{{ lead.groeisignaal or '&ndash;' }}</dd>
                 <dt>Gevonden op</dt><dd>{{ lead.datum_gevonden[:10] if lead.datum_gevonden else '&ndash;' }}</dd>
-                {% if lead.notities %}
-                <dt>KVK</dt><dd>{{ lead.notities }}</dd>
-                {% endif %}
+                {% if lead.notities %}<dt>KVK</dt><dd>{{ lead.notities }}</dd>{% endif %}
             </dl>
 
-            <!-- LinkedIn bedrijfslink -->
-            <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+            <!-- Directe zoeklinks -->
+            <div class="zoeklinks">
                 {% if lead.website %}
                 <a href="{{ lead.website if lead.website.startswith('http') else 'https://' + lead.website }}"
-                   target="_blank" class="btn-secundair btn-klein-link">&#127760; Website</a>
+                   target="_blank" class="zoeklink">&#127760; Website</a>
                 {% endif %}
                 <a href="https://www.kvk.nl/zoeken/?q={{ lead.bedrijfsnaam | urlencode }}"
-                   target="_blank" class="btn-secundair btn-klein-link">&#128209; KVK zoeken</a>
+                   target="_blank" class="zoeklink">&#128209; KVK</a>
                 <a href="https://www.linkedin.com/search/results/companies/?keywords={{ lead.bedrijfsnaam | urlencode }}"
-                   target="_blank" class="btn-linkedin btn-klein-link">in LinkedIn</a>
+                   target="_blank" class="zoeklink zoeklink-linkedin">in Bedrijf</a>
+                <a href="https://www.linkedin.com/search/results/people/?keywords={{ (lead.bedrijfsnaam + ' directeur eigenaar') | urlencode }}"
+                   target="_blank" class="zoeklink zoeklink-linkedin">in Beslissers</a>
             </div>
         </div>
 
-        <!-- Contactpersonen + DMU Finder -->
+        <!-- Contactpersonen -->
         <div class="kaart">
             <div class="kaart-header-rij">
                 <h3>Contactpersonen</h3>
-                <button id="dmu-btn" class="btn-secundair btn-klein-link" onclick="startDMU({{ lead.id }})">
-                    &#128270; DMU zoeken
-                </button>
+                <button class="btn-secundair btn-klein-link" onclick="toggleContactForm()">+ Toevoegen</button>
             </div>
 
-            <div id="dmu-voortgang" class="scan-voortgang verborgen" style="margin-bottom:12px;">
-                <div class="scan-spinner"></div>
-                <span id="dmu-bericht">Zoeken...</span>
-            </div>
-            <div id="dmu-resultaat" class="verborgen" style="margin-bottom:12px;"></div>
-
-            <div id="contacten-lijst">
             {% if lead.contactpersonen %}
-                {% for cp in lead.contactpersonen %}
-                <div class="contact-kaart vertrouwen-{{ cp.vertrouwen }}">
-                    <div class="contact-naam">{{ cp.naam }}</div>
-                    <div class="contact-functie">{{ cp.functie or 'Functie onbekend' }}</div>
-                    {% if cp.email %}<div class="contact-info">&#9993; {{ cp.email }}</div>{% endif %}
-                    {% if cp.telefoon %}<div class="contact-info">&#128222; {{ cp.telefoon }}</div>{% endif %}
-                    <div class="contact-links">
-                        {% if cp.linkedin_url %}
-                        <a href="{{ cp.linkedin_url if cp.linkedin_url.startswith('http') else 'https://' + cp.linkedin_url }}"
-                           target="_blank" class="btn-linkedin">in LinkedIn zoeken &rarr;</a>
-                        {% else %}
-                        <a href="https://www.linkedin.com/search/results/people/?keywords={{ (cp.naam + ' ' + lead.bedrijfsnaam) | urlencode }}"
-                           target="_blank" class="btn-linkedin">in LinkedIn zoeken &rarr;</a>
-                        {% endif %}
-                    </div>
-                    <div class="vertrouwen-label">Vertrouwen: {{ cp.vertrouwen }}</div>
-                </div>
-                {% endfor %}
+            {% for cp in lead.contactpersonen %}
+            <div class="contact-kaart vertrouwen-{{ cp.vertrouwen }}">
+                <div class="contact-naam">{{ cp.naam }}</div>
+                <div class="contact-functie">{{ cp.functie or 'Functie onbekend' }}</div>
+                {% if cp.email %}<div class="contact-info">&#9993; {{ cp.email }}</div>{% endif %}
+                {% if cp.telefoon %}<div class="contact-info">&#128222; {{ cp.telefoon }}</div>{% endif %}
+                <a href="https://www.linkedin.com/search/results/people/?keywords={{ (cp.naam + ' ' + lead.bedrijfsnaam) | urlencode }}"
+                   target="_blank" class="btn-linkedin">in LinkedIn zoeken &rarr;</a>
+                <div class="vertrouwen-label">Vertrouwen: {{ cp.vertrouwen }}</div>
+            </div>
+            {% endfor %}
             {% else %}
-                <p class="geen-contacten">Nog geen contactpersonen gevonden. Klik op &ldquo;DMU zoeken&rdquo; om automatisch te zoeken.</p>
+            <p class="geen-contacten">Nog geen contactpersonen. Zoek via de knoppen hierboven en voeg toe.</p>
             {% endif %}
+
+            <!-- Contact toevoegen formulier -->
+            <div id="contact-form" class="contact-form verborgen">
+                <div class="form-rij">
+                    <label>Naam *</label>
+                    <input type="text" id="cp-naam" placeholder="Jan de Vries">
+                </div>
+                <div class="form-rij">
+                    <label>Functie</label>
+                    <input type="text" id="cp-functie" placeholder="Commercieel Directeur">
+                </div>
+                <div class="form-rij">
+                    <label>E-mail</label>
+                    <input type="email" id="cp-email" placeholder="jan@bedrijf.nl">
+                </div>
+                <div class="form-rij">
+                    <label>LinkedIn URL</label>
+                    <input type="text" id="cp-linkedin" placeholder="linkedin.com/in/jandevries">
+                </div>
+                <div class="form-rij">
+                    <label>Telefoon</label>
+                    <input type="text" id="cp-telefoon" placeholder="06-12345678">
+                </div>
+                <div class="form-rij">
+                    <label>Vertrouwen</label>
+                    <select id="cp-vertrouwen">
+                        <option value="zeker">Zeker (gevonden op website)</option>
+                        <option value="waarschijnlijk" selected>Waarschijnlijk (LinkedIn match)</option>
+                        <option value="onzeker">Onzeker</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:4px;">
+                    <button class="btn-primair" onclick="slaContactOp({{ lead.id }})">Opslaan</button>
+                    <button class="btn-secundair" onclick="toggleContactForm()">Annuleren</button>
+                </div>
+                <div id="cp-fout" style="color:#c62828; font-size:12px; margin-top:6px; display:none;"></div>
             </div>
         </div>
 
@@ -99,7 +116,7 @@
         </div>
     </div>
 
-    <!-- Rechter kolom: tijdlijn + berichten -->
+    <!-- Rechter kolom: berichten + tijdlijn -->
     <div class="detail-rechts">
         {% if lead.berichten %}
         <div class="kaart">
@@ -135,77 +152,46 @@
 </div>
 
 <script>
-var dmuActief = false;
+function toggleContactForm() {
+    var form = document.getElementById('contact-form');
+    form.classList.toggle('verborgen');
+    if (!form.classList.contains('verborgen')) {
+        document.getElementById('cp-naam').focus();
+    }
+}
 
-function startDMU(leadId) {
-    if (dmuActief) return;
-    dmuActief = true;
+function slaContactOp(leadId) {
+    var naam = document.getElementById('cp-naam').value.trim();
+    if (!naam) {
+        var fout = document.getElementById('cp-fout');
+        fout.textContent = 'Naam is verplicht';
+        fout.style.display = 'block';
+        return;
+    }
 
-    var btn = document.getElementById('dmu-btn');
-    var voortgang = document.getElementById('dmu-voortgang');
-    var resultaat = document.getElementById('dmu-resultaat');
-
-    btn.disabled = true;
-    btn.textContent = 'Bezig...';
-    voortgang.classList.remove('verborgen');
-    resultaat.classList.add('verborgen');
-
-    fetch('/api/dmu/zoek/' + leadId, {method: 'POST'})
+    fetch('/api/contact/toevoegen', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            lead_id: leadId,
+            naam: naam,
+            functie: document.getElementById('cp-functie').value.trim(),
+            email: document.getElementById('cp-email').value.trim(),
+            linkedin_url: document.getElementById('cp-linkedin').value.trim(),
+            telefoon: document.getElementById('cp-telefoon').value.trim(),
+            vertrouwen: document.getElementById('cp-vertrouwen').value,
+        })
+    })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.ok) {
-            peilDMUStatus(leadId);
+            window.location.reload();
         } else {
-            toonDMUFout(data.bericht || 'Fout bij starten');
+            var fout = document.getElementById('cp-fout');
+            fout.textContent = data.bericht || 'Fout bij opslaan';
+            fout.style.display = 'block';
         }
-    })
-    .catch(function(e) { toonDMUFout('Verbindingsfout'); });
-}
-
-function peilDMUStatus(leadId) {
-    var interval = setInterval(function() {
-        fetch('/api/dmu/status/' + leadId)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            document.getElementById('dmu-bericht').textContent = data.bericht || 'Zoeken...';
-
-            if (!data.actief) {
-                clearInterval(interval);
-                dmuActief = false;
-                document.getElementById('dmu-voortgang').classList.add('verborgen');
-
-                var btn = document.getElementById('dmu-btn');
-                btn.disabled = false;
-                btn.textContent = '↻ Opnieuw zoeken';
-
-                if (data.contacten && data.contacten.length > 0) {
-                    toonResultaat('&#10003; ' + data.contacten.length + ' contacten gevonden &ndash; pagina wordt herladen...', 'groen');
-                    setTimeout(function() { window.location.reload(); }, 1500);
-                } else {
-                    toonResultaat('Geen contacten gevonden op website. Gebruik de LinkedIn knop om handmatig te zoeken.', '');
-                }
-            }
-        })
-        .catch(function() {});
-    }, 3000);
-}
-
-function toonResultaat(tekst, kleur) {
-    var el = document.getElementById('dmu-resultaat');
-    el.innerHTML = tekst;
-    el.style.color = kleur === 'groen' ? '#2e7d32' : '#666';
-    el.style.fontSize = '13px';
-    el.style.padding = '8px 0';
-    el.classList.remove('verborgen');
-}
-
-function toonDMUFout(bericht) {
-    dmuActief = false;
-    document.getElementById('dmu-voortgang').classList.add('verborgen');
-    var btn = document.getElementById('dmu-btn');
-    btn.disabled = false;
-    btn.textContent = '&#128270; DMU zoeken';
-    toonResultaat('Fout: ' + bericht, '');
+    });
 }
 </script>
 {% endblock %}

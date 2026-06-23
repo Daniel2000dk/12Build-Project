@@ -187,6 +187,26 @@ def start_dmu(lead_id):
 def dmu_status_api(lead_id):
     return jsonify(dmu_status.get(lead_id, {"actief": False, "bericht": "", "contacten": []}))
 
+@app.route("/api/contact/toevoegen", methods=["POST"])
+def contact_toevoegen():
+    data = request.json
+    lead_id = data.get("lead_id")
+    naam = data.get("naam", "").strip()
+    if not lead_id or not naam:
+        return jsonify({"ok": False, "bericht": "Naam en lead_id zijn verplicht"}), 400
+    voeg_contactpersoon_toe(
+        lead_id=lead_id,
+        naam=naam,
+        functie=data.get("functie", ""),
+        linkedin_url=data.get("linkedin_url", ""),
+        email=data.get("email", ""),
+        telefoon=data.get("telefoon", ""),
+        vertrouwen=data.get("vertrouwen", "waarschijnlijk"),
+        bron="handmatig"
+    )
+    update_lead_status(lead_id, "dmu_zoeken")
+    return jsonify({"ok": True})
+
 # ─── Instellingen ────────────────────────────────────────────────────────────
 
 @app.route("/instellingen")
